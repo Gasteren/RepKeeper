@@ -1,0 +1,23 @@
+# Build artifacts
+RepKeeper.zip
+*.zip
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor junk
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# WoW dev tooling
+.luacheckcache
+.pkgmeta.cache
+
+# Test/local-only files
+WTF/
+SavedVariables*.lua

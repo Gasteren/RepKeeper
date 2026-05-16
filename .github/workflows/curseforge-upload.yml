@@ -1,0 +1,34 @@
+name: Upload to CurseForge
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create zip
+        run: |
+          mkdir RepKeeper
+          cp *.lua *.toc RepKeeper/
+          cp -r Modules UI Locales Libs Images RepKeeper/
+          cp LICENSE CHANGELOG.md README.md RepKeeper/
+          zip -r RepKeeper.zip RepKeeper
+
+      - name: Upload to CurseForge
+        uses: itsmeow/curseforge-upload@v3
+        with:
+          token: "${{ secrets.REPKEEPER }}"
+          project_id: "1544433"
+          game_endpoint: "wow"
+          file_path: "RepKeeper.zip"
+          game_versions: "12.0.5"
+          release_type: "release"
+          display_name: "RepKeeper - ${{ github.event.head_commit.timestamp }}"
+          changelog: "${{ github.event.head_commit.message }}"
+          changelog_type: "markdown"

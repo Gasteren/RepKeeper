@@ -1,0 +1,58 @@
+## Interface: 120005
+## Title: RepKeeper
+## Notes: Player reputation, blacklist, and encounter history tracker
+## Author: Gasteren
+## Version: 1.0.0
+## IconTexture: Interface\Icons\INV_Misc_Note_01
+## SavedVariables: RepKeeperDB
+
+# Embedded libraries
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
+Libs\AceAddon-3.0\AceAddon-3.0.xml
+Libs\AceEvent-3.0\AceEvent-3.0.xml
+Libs\AceDB-3.0\AceDB-3.0.xml
+Libs\AceDBOptions-3.0\AceDBOptions-3.0.xml
+Libs\AceLocale-3.0\AceLocale-3.0.xml
+Libs\AceConsole-3.0\AceConsole-3.0.xml
+Libs\AceHook-3.0\AceHook-3.0.xml
+Libs\AceTimer-3.0\AceTimer-3.0.xml
+Libs\AceComm-3.0\AceComm-3.0.xml
+Libs\AceSerializer-3.0\AceSerializer-3.0.xml
+Libs\AceGUI-3.0\AceGUI-3.0.xml
+Libs\AceConfig-3.0\AceConfig-3.0.xml
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+Libs\LibDeflate\LibDeflate.lua
+Libs\LibSerialize\LibSerialize.lua
+
+# Locales
+Locales\enUS.lua
+
+# Core
+Constants.lua
+Core.lua
+Database.lua
+
+# Modules
+Modules\PlayerUtils.lua
+Modules\AltTracking.lua
+Modules\Reputation.lua
+Modules\Timeline.lua
+Modules\EncounterHistory.lua
+Modules\Detection.lua
+Modules\GroupWarning.lua
+Modules\AutoIgnore.lua
+Modules\LFGFilter.lua
+Modules\Tooltip.lua
+Modules\RightClickMenu.lua
+Modules\ImportExport.lua
+Modules\GuildSync.lua
+Modules\Backup.lua
+
+# UI
+UI\MainFrame.lua
+UI\PlayerEditor.lua
+UI\QuickAdd.lua
+UI\Options.lua
+UI\Minimap.lua
