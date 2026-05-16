@@ -17,7 +17,6 @@ jobs:
           mkdir RepKeeper
           cp *.lua *.toc RepKeeper/
           cp -r Modules UI Locales Libs Images RepKeeper/
-          cp LICENSE CHANGELOG.md README.md RepKeeper/
           zip -r RepKeeper.zip RepKeeper
 
       - name: Upload to CurseForge
