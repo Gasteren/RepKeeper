@@ -3,7 +3,7 @@
 ## Notes: Player reputation, blacklist, and encounter history tracker
 ## Author: Frost-Lightbringer
 ## Version: 12.0.5
-## IconTexture: Interface\Icons\INV_Misc_Note_01
+## IconTexture: Interface\Icons\achievement_reputation_08
 ## SavedVariables: RepKeeperDB
 
 # Embedded libraries
