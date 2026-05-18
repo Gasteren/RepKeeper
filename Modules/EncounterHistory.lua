@@ -143,17 +143,51 @@ function EncounterHistory:AutoTrackPlayer(unit, key, name, realm)
     end
 
     -- Append a timeline entry so the user remembers HOW this person ended
-    -- up on the list. Only do it once per session to avoid spamming on
-    -- roster updates.
+    -- up on the list. Only do it once per session...
     session.autoTracked = session.autoTracked or {}
     if not session.autoTracked[key] then
         session.autoTracked[key] = true
+
+        -- ...AND only if we didn't already log a "Grouped with <this instance>"
+        -- entry for this player recently. Without this guard, transient events
+        -- that create a new session (disconnect/reconnect, leaving an
+        -- instance to repair and coming back, releasing spirit outside the
+        -- instance) end up appending another timeline entry for the same
+        -- run. Window: 6 hours, which is plenty for any single dungeon/M+
+        -- run including downtime, but short enough that legitimate re-runs
+        -- of the same dungeon on the same character a day later still log.
+        local label = self:BuildEncounterLabel()
+        local instanceName = session.extra and session.extra.instanceName
+        if self:HasRecentGroupedEntry(rec, instanceName, 6 * 3600) then
+            ns.Database:Touch(rec)
+            return
+        end
+
         ns.Timeline:Append(rec, "system",
-            "Grouped with in " .. self:BuildEncounterLabel(),
+            "Grouped with in " .. label,
             { encounterRef = nil })
     end
 
     ns.Database:Touch(rec)
+end
+
+-- Look back through the player's timeline for a "Grouped with in <instance>"
+-- entry within the lookback window. Returns true if found.
+function EncounterHistory:HasRecentGroupedEntry(rec, instanceName, lookbackSeconds)
+    if not rec.timeline or not instanceName then return false end
+    local cutoff = time() - (lookbackSeconds or 21600)
+    -- Walk newest-first; bail as soon as we drop below the cutoff (timeline
+    -- is append-only, so older entries are guaranteed not to match either).
+    for i = #rec.timeline, 1, -1 do
+        local entry = rec.timeline[i]
+        if not entry.ts or entry.ts < cutoff then return false end
+        if entry.type == "system" and entry.text
+           and entry.text:find("^Grouped with")
+           and entry.text:find(instanceName, 1, true) then
+            return true
+        end
+    end
+    return false
 end
 
 function EncounterHistory:SnapshotRoster()

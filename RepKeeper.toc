@@ -1,8 +1,8 @@
 ## Interface: 120005
 ## Title: RepKeeper
 ## Notes: Player reputation, blacklist, and encounter history tracker
-## Author: Gasteren
-## Version: 1.0.0
+## Author: Frost-Lightbringer
+## Version: 12.0.5
 ## IconTexture: Interface\Icons\INV_Misc_Note_01
 ## SavedVariables: RepKeeperDB
 
