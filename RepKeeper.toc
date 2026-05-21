@@ -5,6 +5,7 @@
 ## Version: 12.0.5
 ## IconTexture: Interface\Icons\achievement_reputation_08
 ## SavedVariables: RepKeeperDB
+## X-Curse-Project-ID: 1544433
 
 # Embedded libraries
 Libs\LibStub\LibStub.lua
