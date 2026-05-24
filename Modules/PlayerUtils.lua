@@ -16,12 +16,23 @@ function PlayerUtils:KeyFromUnit(unit)
     if not unit or not UnitExists(unit) or not UnitIsPlayer(unit) then return nil end
     local name, realm = UnitName(unit)
     if not name then return nil end
-    if not realm or realm == "" then
+    -- Avoid `realm == ""` comparison. In 12.0 the realm string can be
+    -- marked "secret" for certain unit kinds (some delve followers, certain
+    -- cross-realm scenarios), and any equality comparison taints us. Use
+    -- a length check instead, which doesn't read the string contents.
+    if type(realm) ~= "string" or #realm == 0 then
         realm = GetNormalizedRealmName and GetNormalizedRealmName() or GetRealmName()
     end
     if not realm then return nil end
-    realm = realm:gsub("%s", "")
-    return (name:lower() .. "-" .. realm:lower()), name, realm
+    -- Similarly avoid touching the realm string content directly. The gsub
+    -- below is a content read; protect it with a pcall in case realm is
+    -- still secret-marked (rare but observed).
+    local ok, cleaned = pcall(function() return realm:gsub("%s", "") end)
+    if not ok then return nil end
+    realm = cleaned
+    local ok2, key = pcall(function() return name:lower() .. "-" .. realm:lower() end)
+    if not ok2 then return nil end
+    return key, name, realm
 end
 
 -- Resolve from a chat sender string, which can be "Name" or "Name-Realm"

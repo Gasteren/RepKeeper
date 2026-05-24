@@ -179,15 +179,10 @@ function Tooltip:Render(tt, rec)
         local alreadyShown = (rec.reputation == C.REP.BLACKLIST) and rec.notes and rec.notes ~= ""
         if rec.notes and rec.notes ~= "" and not alreadyShown then
             tt:AddLine(ns.L["Notes"] .. ": " .. rec.notes, 0.9, 0.9, 0.7, true)
-        elseif (not alreadyShown) and rec.timeline and #rec.timeline > 0 then
-            local maxLines = s.tooltipMaxNoteLines or 3
-            local count = math.min(maxLines, #rec.timeline)
-            local startIdx = #rec.timeline - count + 1
-            for i = startIdx, #rec.timeline do
-                local entry = rec.timeline[i]
-                tt:AddLine("|cffaaaaaa" .. ns.Timeline:FormatEntry(entry) .. "|r", 0.9, 0.9, 0.7, true)
-            end
         end
+        -- Deliberately do NOT fall back to timeline entries here. The tooltip
+        -- gets cluttered fast with auto-tracked dungeon entries; users who
+        -- want the full timeline can open the editor.
     end
 
     if s.tooltipShowEncounters and rec.encounterCount and rec.encounterCount > 0 then
