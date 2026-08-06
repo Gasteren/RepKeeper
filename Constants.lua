@@ -170,7 +170,6 @@ C.DEFAULTS = {
             -- (DeclineGroup, DeclineGuild, CancelDuel, CloseTrade) taint
             -- the secure execution context and will break things like the
             -- gear upgrade UI, character frame, and combat input. Only
-            -- enable if you understand the tradeoff.
             autoIgnoreEnabled       = false,
             autoIgnoreThreshold     = -2, -- only ignore blacklisted
             autoDeclineGroupInvites = false,
