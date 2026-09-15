@@ -16,22 +16,27 @@ function PlayerUtils:KeyFromUnit(unit)
     if not unit or not UnitExists(unit) or not UnitIsPlayer(unit) then return nil end
     local name, realm = UnitName(unit)
     if not name then return nil end
-    -- Avoid `realm == ""` comparison. In 12.0 the realm string can be
-    -- marked "secret" for certain unit kinds (some delve followers, certain
-    -- cross-realm scenarios), and any equality comparison taints us. Use
-    -- a length check instead, which doesn't read the string contents.
-    if type(realm) ~= "string" or #realm == 0 then
+
+    -- In 12.1, both `name` and `realm` from UnitName can come back as WoW
+    -- "secret" strings for certain unit kinds (some delve followers,
+    -- restricted cross-realm units, etc). Even reading the length of a
+    -- secret string taints us. Wrap every content read in pcall so we
+    -- bail cleanly on secret data instead of poisoning execution.
+    local ok, realmLen = pcall(function() return type(realm) == "string" and #realm or 0 end)
+    if not ok then return nil end
+
+    if not realm or realmLen == 0 then
         realm = GetNormalizedRealmName and GetNormalizedRealmName() or GetRealmName()
     end
     if not realm then return nil end
-    -- Similarly avoid touching the realm string content directly. The gsub
-    -- below is a content read; protect it with a pcall in case realm is
-    -- still secret-marked (rare but observed).
-    local ok, cleaned = pcall(function() return realm:gsub("%s", "") end)
-    if not ok then return nil end
-    realm = cleaned
-    local ok2, key = pcall(function() return name:lower() .. "-" .. realm:lower() end)
+
+    -- gsub/lower are also content reads. Same protection.
+    local ok2, cleaned = pcall(function() return realm:gsub("%s", "") end)
     if not ok2 then return nil end
+    realm = cleaned
+
+    local ok3, key = pcall(function() return name:lower() .. "-" .. realm:lower() end)
+    if not ok3 then return nil end
     return key, name, realm
 end
 
