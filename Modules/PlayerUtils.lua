@@ -126,6 +126,32 @@ function PlayerUtils:Anonymize(rec)
     return "Player" .. string.format("%04d", hash)
 end
 
+-- Decide whether to hide realm suffixes in the UI. Auto-detects the client
+-- and lets the user override.
+--
+-- Client detection uses WOW_PROJECT_ID. On retail mainline the realm is
+-- meaningful (users transfer between them, cross-realm groups etc). On
+-- every other project (Classic, Wrath, Cata, and by extension private
+-- servers running those clients like Forever WoW) the realm shown by
+-- UnitName/CHAT_MSG_* is a backend-only fake string that never appears in
+-- game, so we hide it by default.
+--
+-- The setting accepts three values:
+--   "auto"        - follow client detection (default)
+--   true          - always hide realms
+--   false         - always show realms
+function PlayerUtils:ShouldHideRealms()
+    local pref = ns.db.global.settings.hideRealms
+    if pref == true then return true end
+    if pref == false then return false end
+    -- "auto" (or anything unexpected): follow client
+    if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE
+       and WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE then
+        return true
+    end
+    return false
+end
+
 function PlayerUtils:DisplayName(rec, opts)
     if not rec then return "?" end
     opts = opts or {}
@@ -136,8 +162,17 @@ function PlayerUtils:DisplayName(rec, opts)
     if opts.colorize and rec.class then
         name = self:ColorizeByClass(name, rec.class)
     end
-    if opts.includeRealm ~= false then
+    if opts.includeRealm ~= false and not self:ShouldHideRealms() then
         name = name .. "|cff888888-" .. rec.realm .. "|r"
     end
     return name
+end
+
+-- Plain text (no color codes) name for chat prints and log messages.
+function PlayerUtils:DisplayNamePlain(rec)
+    if not rec then return "?" end
+    if self:ShouldHideRealms() then
+        return rec.name or "?"
+    end
+    return (rec.name or "?") .. "-" .. (rec.realm or "?")
 end

@@ -24,9 +24,23 @@ function Database:NormalizeKey(input)
     input = input:gsub("^%s+", ""):gsub("%s+$", "")
     if input == "" then return nil end
 
-    local name, realm = input:match("^([^%-%s]+)%s*%-%s*(.+)$")
-    if not name then
-        -- No realm given - assume player's realm
+    -- Split on the LAST dash. The name half may contain spaces (Forever-WoW
+    -- style two-word character names like "Oewems Mcdo") but not dashes,
+    -- and the realm half never contains dashes either, so the last dash is
+    -- the reliable separator.
+    local name, realm
+    local dashPos = input:match("^.*()%-")
+    if dashPos then
+        name = input:sub(1, dashPos - 1)
+        realm = input:sub(dashPos + 1)
+        -- Trim whitespace around the split parts
+        name = name:gsub("^%s+", ""):gsub("%s+$", "")
+        realm = realm:gsub("^%s+", ""):gsub("%s+$", "")
+    end
+
+    if not name or name == "" then
+        -- No dash given (or empty name) - assume input is a bare name on the
+        -- player's own realm.
         name = input
         realm = GetNormalizedRealmName and GetNormalizedRealmName() or GetRealmName()
         realm = realm and realm:gsub("%s", "") or ""

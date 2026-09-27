@@ -200,6 +200,7 @@ C.DEFAULTS = {
             -- Privacy
             streamerMode            = false,
             anonymizeExports        = false,
+            hideRealms              = "auto", -- "auto" (follow client - hide on Classic clients like Forever WoW, show on retail mainline), true (always hide), false (always show)
 
             -- Backup
             autoBackupEnabled       = true,

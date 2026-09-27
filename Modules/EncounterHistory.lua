@@ -58,20 +58,55 @@ end
 function EncounterHistory:DetectInstance()
     local inInstance, instanceType = IsInInstance()
     if inInstance then
+        local currentInstanceName = GetInstanceInfo()
+
+        -- If a session was pending finalize (we briefly left, e.g. corpse
+        -- run) and we're back in the SAME instance, cancel the pending
+        -- finalize and keep the existing session. This prevents classic-era
+        -- death runs from being counted as separate encounters.
+        if session and session._pendingFinalize
+           and currentInstanceName
+           and session.extra.instanceName == currentInstanceName then
+            session._pendingFinalize = nil
+            -- No new session, no SnapshotRoster: same players, same run.
+            return
+        end
+
+        -- If a session was pending finalize but this is a DIFFERENT
+        -- instance, resolve the old one now before starting fresh.
+        if session and session._pendingFinalize then
+            self:Finalize(C.ENCOUNTER_RESULT.UNKNOWN)
+        end
+
         if not session then
             local encType = self:MapInstanceType(instanceType)
             session = newSession(encType, { instanceType = instanceType })
             -- Capture instance display name (e.g. "Magister's Terrace")
-            local instanceName = GetInstanceInfo()
-            if instanceName and instanceName ~= "" then
-                session.extra.instanceName = instanceName
+            if currentInstanceName and currentInstanceName ~= "" then
+                session.extra.instanceName = currentInstanceName
             end
             self:SnapshotRoster()
         end
     else
-        -- Left instance — finalize session if one was active
-        if session then
-            self:Finalize(C.ENCOUNTER_RESULT.UNKNOWN)
+        -- Left instance. Don't finalize immediately — classic-era corpse
+        -- runs release you to a graveyard outside the instance, which
+        -- would otherwise trigger a Finalize and bump every party
+        -- member's encounter count per death. Instead, mark the session
+        -- as pending and schedule a deferred finalize; if we re-enter
+        -- the SAME instance within the grace window, the pending state
+        -- is cancelled in the inInstance branch above.
+        if session and not session._pendingFinalize then
+            session._pendingFinalize = true
+            local sess = session
+            local GRACE_SECONDS = 90
+            C_Timer.After(GRACE_SECONDS, function()
+                -- Only finalize if it's still the same session AND still
+                -- pending (a re-entry would have cleared the flag).
+                if session == sess and session._pendingFinalize then
+                    session._pendingFinalize = nil
+                    self:Finalize(C.ENCOUNTER_RESULT.UNKNOWN)
+                end
+            end)
         end
     end
 end
@@ -341,7 +376,23 @@ function EncounterHistory:OnEncounterEnd(success)
 end
 
 function EncounterHistory:OnLeavingWorld()
-    if session then self:Finalize(C.ENCOUNTER_RESULT.UNKNOWN) end
+    -- Don't finalize immediately. Death runs in classic-era instances
+    -- release you to a graveyard outside the instance, briefly leaving
+    -- the world, then re-entering when you cross the portal again.
+    -- Mark the session pending; DetectInstance clears the flag on
+    -- re-entry to the same instance, and a timer finalizes if the
+    -- grace window passes without a return.
+    if session and not session._pendingFinalize then
+        session._pendingFinalize = true
+        local sess = session
+        local GRACE_SECONDS = 90
+        C_Timer.After(GRACE_SECONDS, function()
+            if session == sess and session._pendingFinalize then
+                session._pendingFinalize = nil
+                self:Finalize(C.ENCOUNTER_RESULT.UNKNOWN)
+            end
+        end)
+    end
 end
 
 function EncounterHistory:Finalize(result)

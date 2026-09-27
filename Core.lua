@@ -179,7 +179,7 @@ SlashHandlers.add = function(self, rest)
         ns.Timeline:Append(rec, "manual", note)
     end
     ns.Database:Touch(rec)
-    self:Printf(L["Player added: %s"], rec.name .. "-" .. rec.realm)
+    self:Printf(L["Player added: %s"], ns.PlayerUtils:DisplayNamePlain(rec))
     if ns.MainFrame and ns.MainFrame.Refresh then ns.MainFrame:Refresh() end
 end
 

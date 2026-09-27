@@ -321,7 +321,7 @@ function MainFrame:BuildDetailPane()
         -- for confirmation because registering entries in that table taints
         -- the secure StaticPopup subsystem in 12.0 (breaks gear upgrade UI).
         if not IsShiftKeyDown() then
-            ns.Addon:Print("|cffff8888Shift-click|r the Remove Player button to confirm removing " .. rec.name .. "-" .. rec.realm .. ".")
+            ns.Addon:Print("|cffff8888Shift-click|r the Remove Player button to confirm removing " .. ns.PlayerUtils:DisplayNamePlain(rec) .. ".")
             return
         end
         ns.Database:RemovePlayer(selectedKey)

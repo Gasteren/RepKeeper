@@ -281,6 +281,27 @@ local function buildOptionsTable()
                         get=getter("streamerMode"), set=setter("streamerMode"), order=1 },
                     anonymizeExports= { type="toggle", name="Anonymize exports (no notes/timeline/BNet)",
                         get=getter("anonymizeExports"), set=setter("anonymizeExports"), order=2 },
+                    hideRealms      = {
+                        type = "select",
+                        name = "Show realms",
+                        desc = "Auto follows the client: hides realms on Classic-era clients (like Forever WoW) where the realm is a backend-only fake string, and shows them on retail. Whispers and /ignore always use the full identifier regardless.",
+                        values = { auto = "Auto (recommended)", show = "Always show", hide = "Always hide" },
+                        sorting = { "auto", "show", "hide" },
+                        get = function()
+                            local v = ns.db.global.settings.hideRealms
+                            if v == true then return "hide" end
+                            if v == false then return "show" end
+                            return "auto"
+                        end,
+                        set = function(_, v)
+                            if v == "hide" then ns.db.global.settings.hideRealms = true
+                            elseif v == "show" then ns.db.global.settings.hideRealms = false
+                            else ns.db.global.settings.hideRealms = "auto" end
+                            if ns.MainFrame and ns.MainFrame.Refresh then ns.MainFrame:Refresh() end
+                        end,
+                        width = "full",
+                        order = 3,
+                    },
                 },
             },
 
