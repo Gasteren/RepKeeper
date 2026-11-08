@@ -2,7 +2,7 @@
 
 ## Title: RepKeeper
 ## Notes: Player reputation, blacklist, and encounter history tracker
-## Author: Frost-Lightbringer
+## Author: Frost Forever | EU Normal Ruleset
 ## Version: 1.0.0
 ## IconTexture: Interface\Icons\achievement_reputation_08
 ## SavedVariables: RepKeeperDB
