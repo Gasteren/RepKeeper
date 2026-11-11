@@ -81,49 +81,37 @@ function RightClickMenu:BuildMenuModern(root, contextData)
         return
     end
 
-    local rec = ns.db.global.players[key]
+    local function record()
+        return ns.db.global.players[key]
+    end
     local function ensureRec()
-        return rec or select(1, ns.Database:GetOrCreatePlayer(name .. "-" .. (server or "")))
+        return record() or select(1, ns.Database:GetOrCreatePlayer(name .. "-" .. (server or "")))
     end
 
     root:CreateDivider()
     local sub = root:CreateButton(ns.L["RepKeeper"])
 
-    -- Reputation actions. Mirror the row-right-click menu layout so users
-    -- have one mental model: three rep buttons, current dimmed (here we
-    -- just omit the no-op current state to keep the menu shorter).
-    local currentRep = rec and rec.reputation or 0
-    if currentRep ~= C.REP.BLACKLIST then
-        sub:CreateButton("|cffff5555Set Blacklist|r", function()
-            local r = ensureRec(); if r then
-                ns.Reputation:Set(r, C.REP.BLACKLIST)
-                if ns.MainFrame then ns.MainFrame:Refresh() end
-            end
-        end)
-    end
-    if currentRep ~= C.REP.NEUTRAL then
-        sub:CreateButton("|cffcccccc Set Neutral|r", function()
-            local r = ensureRec(); if r then
-                ns.Reputation:Set(r, C.REP.NEUTRAL)
-                if ns.MainFrame then ns.MainFrame:Refresh() end
-            end
-        end)
-    end
-    if currentRep ~= C.REP.POSITIVE then
-        sub:CreateButton("|cff88ff88Set Positive|r", function()
-            local r = ensureRec(); if r then
-                ns.Reputation:Set(r, C.REP.POSITIVE)
-                if ns.MainFrame then ns.MainFrame:Refresh() end
-            end
+    -- The rating as a pick-one choice, like the RepKeeper window: the current
+    -- one is ticked (Neutral for players RepKeeper doesn't know yet).
+    local UI = ns.UI
+    for _, level in ipairs(UI.RATING_ORDER) do
+        sub:CreateRadio(UI.RatingIcon(level, 14) .. " " .. UI.RatingName(level), function()
+            local r = record()
+            return (r and r.reputation or C.REP.NEUTRAL) == level
+        end, function()
+            -- Neutral for someone who isn't on the list changes nothing.
+            if not record() and level == C.REP.NEUTRAL then return end
+            local r = ensureRec()
+            if r then UI.SetRating(r, level) end
         end)
     end
 
     sub:CreateDivider()
 
-    sub:CreateButton(ns.L["RepKeeper: View Profile"], function()
+    sub:CreateButton(ns.L["Open in RepKeeper"], function()
         local r = ensureRec(); if r and ns.PlayerEditor then ns.PlayerEditor:Open(r) end
     end)
-    sub:CreateButton(ns.L["RepKeeper: Add Note..."], function()
+    sub:CreateButton(ns.L["Write a note..."], function()
         local r = ensureRec(); if r and ns.PlayerEditor then ns.PlayerEditor:Open(r, { focus = "note" }) end
     end)
 end

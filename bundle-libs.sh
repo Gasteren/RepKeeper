@@ -27,9 +27,9 @@ git clone --depth 1 https://github.com/WoWUIDev/Ace3.git "$TMP/Ace3" 2>&1 | tail
 
 # Ace3 ships every AceXxx-3.0 module as a folder; copy what we use.
 for mod in LibStub CallbackHandler-1.0 \
-           AceAddon-3.0 AceEvent-3.0 AceDB-3.0 AceDBOptions-3.0 \
+           AceAddon-3.0 AceEvent-3.0 AceDB-3.0 \
            AceLocale-3.0 AceConsole-3.0 AceHook-3.0 AceTimer-3.0 \
-           AceComm-3.0 AceSerializer-3.0 AceGUI-3.0 AceConfig-3.0; do
+           AceComm-3.0 AceSerializer-3.0; do
   if [ -d "$TMP/Ace3/$mod" ]; then
     rm -rf "Libs/$mod"
     cp -r "$TMP/Ace3/$mod" "Libs/$mod"
