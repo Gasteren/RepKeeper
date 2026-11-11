@@ -1,10 +1,11 @@
 -- UI/Minimap.lua
 -- LibDataBroker launcher + LibDBIcon minimap button.
---   Left-click  → toggle main window
---   Right-click → open settings
---   Tooltip     → quick stats summary
+--   Left-click  -> open or close RepKeeper
+--   Right-click -> its Options tab
+--   Tooltip     -> how many players you rated
 
 local addonName, ns = ...
+local L = LibStub("AceLocale-3.0"):GetLocale("RepKeeper")
 local C = ns.Constants
 
 local Minimap = {}
@@ -16,49 +17,52 @@ local LDBIcon = LibStub("LibDBIcon-1.0", true)
 local dataObject
 
 function Minimap:Initialize()
-    if not LDB or not LDBIcon then return end
+    if not LDB or not LDBIcon then
+        return
+    end
 
     dataObject = LDB:NewDataObject("RepKeeper", {
         type = "launcher",
         text = "RepKeeper",
         icon = "Interface\\Icons\\INV_Misc_Note_01",
         OnClick = function(_, button)
-            if button == "LeftButton" then
-                if ns.MainFrame then ns.MainFrame:Toggle() end
-            elseif button == "RightButton" then
-                if ns.Options then ns.Options:Open() end
+            if button == "RightButton" then
+                if ns.UI and ns.UI.ShowOptions then
+                    ns.UI.ShowOptions()
+                end
+            elseif ns.MainFrame then
+                ns.MainFrame:Toggle()
             end
         end,
         OnTooltipShow = function(tt)
-            tt:AddLine("|cffd0a070RepKeeper|r")
-            local total = ns.Database:Count()
-            local blacklisted, positives = 0, 0
-            for _, rec in pairs(ns.db.global.players) do
-                if rec.reputation == C.REP.BLACKLIST then blacklisted = blacklisted + 1 end
-                if rec.reputation == C.REP.POSITIVE then positives = positives + 1 end
-            end
-            tt:AddDoubleLine("Players tracked", total, 1, 1, 1, 1, 1, 1)
-            tt:AddDoubleLine("Blacklisted", blacklisted, 1, 0.4, 0.4, 1, 0.4, 0.4)
-            tt:AddDoubleLine("Positive", positives, 0.4, 0.85, 0.4, 0.4, 0.85, 0.4)
-            if ns.GuildSync and ns.db.global.settings.guildSyncEnabled then
+            local W, UI = ns.W, ns.UI
+            local c = W and W.theme.title or { 1, 0.82, 0 }
+            tt:AddLine(L["RepKeeper"], c[1], c[2], c[3])
+            local total, black, positive = UI.Counts()
+            local rb, gb, bb = ns.PlayerUtils:RepColor(C.REP.BLACKLIST)
+            local rp, gp, bp = ns.PlayerUtils:RepColor(C.REP.POSITIVE)
+            tt:AddDoubleLine(L["Players"], total, 1, 1, 1, 1, 1, 1)
+            tt:AddDoubleLine(L["Blacklisted"], black, rb, gb, bb, rb, gb, bb)
+            tt:AddDoubleLine(L["Positive"], positive, rp, gp, bp, rp, gp, bp)
+            if ns.GuildSync and ns.S.guildSyncEnabled then
                 local pending = ns.GuildSync:CountPending()
                 if pending > 0 then
-                    tt:AddDoubleLine("Pending guild sync suggestions", pending,
-                        1, 1, 0.6, 1, 1, 0.6)
+                    tt:AddDoubleLine(L["Guild suggestions"], pending, 0.25, 1, 0.25, 0.25, 1, 0.25)
                 end
             end
             tt:AddLine(" ")
-            tt:AddLine("|cff888888Left-click:|r toggle window")
-            tt:AddLine("|cff888888Right-click:|r settings")
+            tt:AddLine(L["Click to open RepKeeper. Right-click for options."], 0.62, 0.62, 0.62, true)
         end,
     })
 
-    LDBIcon:Register("RepKeeper", dataObject, ns.db.global.settings.minimapButton)
+    LDBIcon:Register("RepKeeper", dataObject, ns.S.minimapButton)
 end
 
 function Minimap:Refresh()
-    if not LDBIcon then return end
-    if ns.db.global.settings.minimapButton.hide then
+    if not LDBIcon then
+        return
+    end
+    if ns.S.minimapButton.hide then
         LDBIcon:Hide("RepKeeper")
     else
         LDBIcon:Show("RepKeeper")

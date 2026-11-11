@@ -9,7 +9,6 @@ local GroupWarning = {}
 ns.GroupWarning = GroupWarning
 
 local Addon = ns.Addon
-local frame  -- lazy-built popup frame
 local lastCheckedKey  -- avoid spamming the popup on every roster blip
 
 function GroupWarning:Initialize()
@@ -68,113 +67,18 @@ function GroupWarning:CheckGroup()
     end
 end
 
-function GroupWarning:BuildFrame()
-    if frame then return frame end
-
-    frame = CreateFrame("Frame", "RepKeeperGroupWarning", UIParent, "BackdropTemplate")
-    frame:SetSize(420, 180)
-    frame:SetPoint("TOP", UIParent, "TOP", 0, -120)
-    frame:SetFrameStrata("DIALOG")
-    frame:SetMovable(true)
-    frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-    frame:SetClampedToScreen(true)
-    frame:Hide()
-
-    if frame.SetBackdrop then
-        frame:SetBackdrop({
-            bgFile   = "Interface\\Buttons\\WHITE8x8",
-            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-            tile = false, edgeSize = 14,
-            insets   = { left = 4, right = 4, top = 4, bottom = 4 },
-        })
-        frame:SetBackdropColor(0.10, 0.04, 0.04, 0.96)
-        frame:SetBackdropBorderColor(0.7, 0.3, 0.3, 1)
-    end
-
-    local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    title:SetPoint("TOP", 0, -16)
-    title:SetText("|cffff5555" .. ns.L["RepKeeper Warning"] .. "|r")
-    frame.title = title
-
-    local body = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    body:SetPoint("TOPLEFT", 20, -48)
-    body:SetPoint("TOPRIGHT", -20, -48)
-    body:SetJustifyH("LEFT")
-    body:SetJustifyV("TOP")
-    frame.body = body
-
-    local viewBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    viewBtn:SetSize(110, 22)
-    viewBtn:SetPoint("BOTTOMLEFT", 20, 16)
-    viewBtn:SetText(ns.L["View Details"])
-    viewBtn:SetScript("OnClick", function()
-        if ns.MainFrame then ns.MainFrame:Show() end
-        frame:Hide()
-    end)
-
-    local dismissBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    dismissBtn:SetSize(90, 22)
-    dismissBtn:SetPoint("BOTTOMRIGHT", -20, 16)
-    dismissBtn:SetText(ns.L["Dismiss"])
-    dismissBtn:SetScript("OnClick", function() frame:Hide() end)
-
-    local leaveBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    leaveBtn:SetSize(110, 22)
-    leaveBtn:SetPoint("BOTTOM", 0, 16)
-    leaveBtn:SetText(ns.L["Leave Group"])
-    leaveBtn:SetScript("OnClick", function()
-        LeaveParty()
-        frame:Hide()
-    end)
-
-    return frame
-end
-
+-- The pop-ups themselves live in UI\Warnings.lua.
 function GroupWarning:ShowWarning(flagged)
-    self:BuildFrame()
-    local lines = {}
-    if #flagged == 1 then
-        local rec = flagged[1]
-        local reason = ns.Reputation:WarningReason(rec)
-        table.insert(lines, string.format(ns.L["%s in your group is %s"],
-            ns.PlayerUtils:DisplayName(rec, { colorize = true, includeRealm = true }),
-            "|cffff8888" .. reason .. "|r"))
-    else
-        table.insert(lines, "|cffff8888" .. string.format(ns.L["%d players in your group are flagged"], #flagged) .. "|r")
-        for _, rec in ipairs(flagged) do
-            table.insert(lines, "  * " ..
-                ns.PlayerUtils:DisplayName(rec, { colorize = true, includeRealm = true }) ..
-                " - " .. ns.Reputation:WarningReason(rec))
-        end
+    if ns.UI and ns.UI.ShowGroupWarning then
+        ns.UI.ShowGroupWarning(flagged)
     end
-    frame.body:SetText(table.concat(lines, "\n"))
-    frame:Show()
-    frame:SetHeight(80 + #lines * 16)
 end
 
 -- Fires when a blacklisted player sends an invite, regardless of whether
--- auto-decline is configured. Visible toast so the user notices even if
+-- auto-decline is configured. Visible warning so the user notices even if
 -- they would otherwise click through the PARTY_INVITE popup absent-mindedly.
 function GroupWarning:ShowInviteWarning(rec)
-    self:BuildFrame()
-    local reason = ns.Reputation:WarningReason(rec)
-    local name = ns.PlayerUtils:DisplayName(rec, { colorize = true, includeRealm = true })
-    local lines = {
-        "|cffff5555INCOMING INVITE FROM BLACKLISTED PLAYER|r",
-        name .. "  |cff888888(" .. reason .. ")|r",
-    }
-    if rec.notes and rec.notes ~= "" then
-        lines[#lines + 1] = "|cffaaaaaaNote:|r " .. rec.notes
+    if ns.UI and ns.UI.ShowInviteWarning then
+        ns.UI.ShowInviteWarning(rec)
     end
-    frame.body:SetText(table.concat(lines, "\n"))
-    frame:Show()
-    frame:SetHeight(80 + #lines * 16)
-    -- Auto-hide after 15 seconds; the PARTY_INVITE popup itself has its own
-    -- timeout and the user may have already dealt with it.
-    C_Timer.After(15, function()
-        if frame and frame:IsShown() then frame:Hide() end
-    end)
 end

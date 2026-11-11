@@ -176,94 +176,17 @@ function ImportExport:Apply(payload, opts)
 end
 
 -- ==========================================================================
--- UI dialogs
+-- UI dialogs (the windows live in UI\Dialogs.lua)
 -- ==========================================================================
 
-local AceGUI = LibStub("AceGUI-3.0")
-
 function ImportExport:OpenExport()
-    local frame = AceGUI:Create("Frame")
-    frame:SetTitle(ns.L["Export"])
-    frame:SetLayout("Flow")
-    frame:SetWidth(500)
-    frame:SetHeight(440)
-
-    -- Filter toggle: blacklist only vs full list. Regenerates the string
-    -- in place when toggled so the user sees the size change.
-    local state = { blacklistOnly = false }
-
-    local checkbox = AceGUI:Create("CheckBox")
-    checkbox:SetLabel("Blacklist only")
-    checkbox:SetValue(false)
-    checkbox:SetFullWidth(true)
-    frame:AddChild(checkbox)
-
-    local edit = AceGUI:Create("MultiLineEditBox")
-    edit:SetLabel(ns.L["Copy this string to share your list:"])
-    edit:DisableButton(true)
-    edit:SetFullWidth(true)
-    edit:SetNumLines(15)
-    frame:AddChild(edit)
-
-    local function regenerate()
-        local payload = self:BuildExportPayload({ blacklistOnly = state.blacklistOnly })
-        local str = self:Encode(payload)
-        edit:SetText(str)
-        frame:SetStatusText(string.format("%d players, %d bytes%s",
-            #payload.players, #str,
-            state.blacklistOnly and " (blacklist only)" or ""))
-        edit.editBox:HighlightText()
-        edit:SetFocus()
+    if ns.UI and ns.UI.ShowExport then
+        ns.UI.ShowExport()
     end
-
-    checkbox:SetCallback("OnValueChanged", function(_, _, val)
-        state.blacklistOnly = val
-        regenerate()
-    end)
-
-    regenerate()
 end
 
 function ImportExport:OpenImport()
-    local frame = AceGUI:Create("Frame")
-    frame:SetTitle(ns.L["Import"])
-    frame:SetStatusText("")
-    frame:SetLayout("Flow")
-    frame:SetWidth(500)
-    frame:SetHeight(400)
-
-    local edit = AceGUI:Create("MultiLineEditBox")
-    edit:SetLabel(ns.L["Paste an import string below:"])
-    edit:SetFullWidth(true)
-    edit:SetNumLines(15)
-    edit:DisableButton(true)
-    frame:AddChild(edit)
-
-    local importBtn = AceGUI:Create("Button")
-    importBtn:SetText(ns.L["Import"])
-    importBtn:SetWidth(120)
-    importBtn:SetCallback("OnClick", function()
-        local str = edit:GetText()
-        local payload, err = self:Decode(str)
-        if not payload then
-            frame:SetStatusText(string.format(ns.L["Import failed: %s"], err or "?"))
-            return
-        end
-        local ok, vErr = self:Validate(payload)
-        if not ok then
-            frame:SetStatusText(string.format(ns.L["Import failed: %s"], vErr or "?"))
-            return
-        end
-        local stats = self:Apply(payload)
-        frame:SetStatusText(string.format(ns.L["Import successful: %d players added, %d updated, %d skipped."],
-            stats.added, stats.updated, stats.skipped))
-        if ns.MainFrame then ns.MainFrame:Refresh() end
-    end)
-    frame:AddChild(importBtn)
-
-    local cancelBtn = AceGUI:Create("Button")
-    cancelBtn:SetText(ns.L["Cancel"])
-    cancelBtn:SetWidth(120)
-    cancelBtn:SetCallback("OnClick", function() frame:Hide() end)
-    frame:AddChild(cancelBtn)
+    if ns.UI and ns.UI.ShowImport then
+        ns.UI.ShowImport()
+    end
 end

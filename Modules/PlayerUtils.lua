@@ -8,7 +8,74 @@ local C = ns.Constants
 local PlayerUtils = {}
 ns.PlayerUtils = PlayerUtils
 
-function PlayerUtils:Initialize() end
+function PlayerUtils:Initialize()
+    self.loggedIn = true
+end
+
+-- WoW Forever has first and last names ("Frost Paladin", regional unique names).
+-- Its UnitName returns the two parts as name and realm, so a player met in a
+-- group is saved as name "Frost", realm "Paladin", while chat gives
+-- "Frost Paladin" with the server's realm.
+local twoPart
+function PlayerUtils:TwoPartNames()
+    if twoPart ~= nil then return twoPart end
+    local f = RegionalUniqueNamesEnabled
+    if type(f) ~= "function" then
+        twoPart = false
+        return false
+    end
+    local ok, on = pcall(f)
+    on = ok and on == true
+    if on or self.loggedIn then twoPart = on end
+    return on
+end
+
+local function realmKey(realm)
+    return (tostring(realm or ""):gsub("%s", ""):lower())
+end
+
+function PlayerUtils:IsOwnRealm(realm)
+    local own = GetNormalizedRealmName and GetNormalizedRealmName() or GetRealmName()
+    return own ~= nil and realmKey(own) == realmKey(realm)
+end
+
+-- The character's own name, without a realm. On WoW Forever a name saved as
+-- name + surname-as-realm comes back as "First Surname"; the second return
+-- value says the realm field held the surname.
+function PlayerUtils:BaseName(rec)
+    local name = rec.name or "?"
+    if self:TwoPartNames() and not name:find(" ", 1, true)
+       and rec.realm and rec.realm ~= "" and not self:IsOwnRealm(rec.realm) then
+        return name .. " " .. rec.realm, true
+    end
+    return name, false
+end
+
+-- What to whisper: "First Surname" on WoW Forever, Name-Realm elsewhere.
+function PlayerUtils:WhisperTarget(rec)
+    if not rec or not rec.name then return nil end
+    if self:TwoPartNames() then
+        return (self:BaseName(rec))
+    end
+    if rec.realm and rec.realm ~= "" then
+        return rec.name .. "-" .. rec.realm
+    end
+    return rec.name
+end
+
+-- A name typed in by the player, made ready for Database:GetOrCreatePlayer.
+-- On WoW Forever "First Last" (or "First Last-Realm") is saved like the game's
+-- units give it (name First, realm Last), so tooltips and group checks find it.
+function PlayerUtils:TypedName(text)
+    text = tostring(text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if self:TwoPartNames() then
+        local first, last = text:match("^([^%s%-]+)[%s%-]+([^%s%-]+)")
+        if first then
+            return first .. "-" .. last
+        end
+    end
+    return text
+end
 
 -- Resolve a unit token (e.g. "target", "party2", "raid1") into a normalized key.
 -- Returns key, name, realm, or nil if unit doesn't exist or isn't a player.
@@ -144,7 +211,11 @@ function PlayerUtils:ShouldHideRealms()
     local pref = ns.db.global.settings.hideRealms
     if pref == true then return true end
     if pref == false then return false end
-    -- "auto" (or anything unexpected): follow client
+    -- "auto" (or anything unexpected): follow client. Realms are only server
+    -- names where characters have first and last names (WoW Forever).
+    if self:TwoPartNames() then
+        return true
+    end
     if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE
        and WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE then
         return true
@@ -158,11 +229,12 @@ function PlayerUtils:DisplayName(rec, opts)
     if ns.db.global.settings.streamerMode and not opts.bypassStreamer then
         return self:Anonymize(rec)
     end
-    local name = rec.name
+    local name, surnamed = self:BaseName(rec)
     if opts.colorize and rec.class then
         name = self:ColorizeByClass(name, rec.class)
     end
-    if opts.includeRealm ~= false and not self:ShouldHideRealms() then
+    if opts.includeRealm ~= false and not surnamed and not self:ShouldHideRealms()
+       and rec.realm and rec.realm ~= "" then
         name = name .. "|cff888888-" .. rec.realm .. "|r"
     end
     return name
@@ -171,8 +243,9 @@ end
 -- Plain text (no color codes) name for chat prints and log messages.
 function PlayerUtils:DisplayNamePlain(rec)
     if not rec then return "?" end
-    if self:ShouldHideRealms() then
-        return rec.name or "?"
+    local name, surnamed = self:BaseName(rec)
+    if surnamed or self:ShouldHideRealms() or not rec.realm or rec.realm == "" then
+        return name
     end
-    return (rec.name or "?") .. "-" .. (rec.realm or "?")
+    return name .. "-" .. rec.realm
 end

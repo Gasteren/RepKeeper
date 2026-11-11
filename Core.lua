@@ -34,7 +34,11 @@ function RepKeeper:OnInitialize()
     -- Hand database singleton to modules so they don't all redo LibStub calls.
     -- MUST be set before any ns.X:Initialize() call, since modules read ns.db.
     ns.db = self.db
+    ns.S = self.db.global.settings
     ns.L = L
+
+    local getMeta = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
+    ns.version = getMeta and getMeta(addonName, "Version") or ""
 
     -- Register slash commands
     self:RegisterChatCommand("rk", "OnSlashCommand")
@@ -113,6 +117,7 @@ function RepKeeper:OnProfileChanged()
     -- AceDB swapped profiles. We use global storage so this is mostly a no-op,
     -- but settings are profile-scoped if user enables that later. For now,
     -- just notify modules so they refresh UI state.
+    ns.S = self.db.global.settings
     if ns.MainFrame and ns.MainFrame.Refresh then ns.MainFrame:Refresh() end
 end
 
@@ -152,6 +157,7 @@ function RepKeeper:PrintHelp()
     self:Print(L["/rk remove <name-realm> - remove a player"])
     self:Print(L["/rk note <name-realm> <text> - add a timeline note"])
     self:Print(L["/rk tag <name-realm> <tag> - toggle a tag"])
+    self:Print(L["/rk groups - your groups and who was in them"])
     self:Print(L["/rk export - export your list"])
     self:Print(L["/rk import - open import dialog"])
     self:Print(L["/rk backup - create manual backup"])
@@ -249,11 +255,24 @@ SlashHandlers.backup = function(self)
     end
 end
 
-SlashHandlers.config = function(self)
+SlashHandlers.config = function(self, rest)
     if ns.Options and ns.Options.Open then
-        ns.Options:Open()
+        local page = rest and rest:match("^(%S+)")
+        ns.Options:Open(page and page:lower() or nil)
     end
 end
 
 SlashHandlers.options = SlashHandlers.config
 SlashHandlers.settings = SlashHandlers.config
+
+SlashHandlers.groups = function(self)
+    if ns.UI and ns.UI.Show then
+        ns.UI.Show("groups")
+    end
+end
+
+SlashHandlers.players = function(self)
+    if ns.UI and ns.UI.Show then
+        ns.UI.Show("players")
+    end
+end

@@ -221,6 +221,13 @@ C.DEFAULTS = {
             mainFramePoint          = nil,  -- {point, x, y}
             -- Timeline date display: "relative" ("3d ago") or "absolute" ("2026-05-13 14:22")
             timelineDateFormat      = "relative",
+            -- The windows: look (classic, steel, horde, alliance), size, where each window was left, last tab.
+            ui = {
+                theme = "classic",
+                scale = 1.0,
+                pos   = {},
+                tab   = "players",
+            },
         },
         backups = {},  -- [timestamp] = serialized snapshot
         lastBackupTime = 0,
