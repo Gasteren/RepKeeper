@@ -898,6 +898,400 @@ T("chat commands", function()
 	Ok(ns.UI.panels.players:IsShown(), "/rk players")
 end)
 
+-- The setup -----------------------------------------------------------------------------------------------------------------
+local function SetupWindow(ns)
+	local s = ns.Setup.Frame()
+	Ok(s and s:IsShown(), "the setup is open")
+	return s
+end
+local function SetupClosed(ns)
+	local s = ns.Setup.Frame()
+	return not (s and s:IsShown())
+end
+-- The radio button (or check) labelled `label` is ticked.
+local function Picked(label, root)
+	local b = FindButton(label, root)
+	assert(b, "no choice " .. label .. " on screen\n" .. ScreenText(root))
+	return b:GetChecked() and true or false
+end
+-- Saved data from before the setup came (RepKeeper 2.0).
+local function BeforeSetup()
+	local db = Fixture()
+	db.global.settings.setupVersion = nil
+	return db
+end
+
+T("setup: opens by itself the first time; Skip keeps everything as it was", function()
+	local ns = Boot()
+	local s = SetupWindow(ns)
+	Eq(Text(s.subtitle), "First-time setup")
+	Eq(Text(s.step), "Step 1 of 6")
+	Has(ScreenText(s), "How should RepKeeper look?")
+	Ok(not s.back:IsEnabled(), "nothing to go back to on the first page")
+	Press("Skip setup", s)
+	Ok(not s:IsShown())
+	Has(Chat(), "Setup skipped. Type /rk setup to run it any time.")
+	Eq(ns.S.setupVersion, 1)
+	Eq(ns.S.groupWarningEnabled, true, "the settings stay as they were")
+	Eq(ns.W.themeId, "classic")
+	MOCK.Fire("PLAYER_ENTERING_WORLD", false, false)
+	MOCK.Advance(10, 0.5)
+	Ok(SetupClosed(ns), "a loading screen doesn't bring it back")
+	Eq(Logout().global.settings.setupVersion, 1, "saved: it doesn't open at the next login")
+end)
+
+T("setup: one question a page, each with an example; Finish saves the answers", function()
+	local db = BeforeSetup()
+	db.global.settings.tooltipEnabled = false
+	local ns = Start(db)
+	local s = SetupWindow(ns)
+	Eq(Text(s.subtitle), "First-time setup", "someone who used RepKeeper before sees it once too")
+
+	-- 1. The look: the window shows it right away; it's saved on Finish.
+	Press("Horde", s)
+	Eq(ns.W.themeId, "horde", "the window takes the look at once")
+	Eq(ns.S.ui.theme, "classic", "but it isn't saved yet")
+	MOCK.DragSlider(FindText("UI size", s):GetParent(), 120)
+	Near(s:GetScale(), 1.2, 0.001, "the size too")
+	Near(ns.S.ui.scale, 1, 0.001)
+	Press("Next", s)
+
+	-- 2. The warning.
+	Eq(Text(s.step), "Step 2 of 6")
+	Ok(s.back:IsEnabled())
+	Has(ScreenText(s), "Warn you about blacklisted players?")
+	Ok(Picked("Yes, warn me when one is in my group", s), "what you have now is picked")
+	local sound = FindButton("Play a sound with it", s)
+	Ok(sound:IsEnabled() and sound:GetChecked())
+	Has(ScreenText(s.pages[2].example), "A player you blacklisted is in your group.")
+	Press("No, don't warn me", s)
+	Ok(not Picked("Yes, warn me when one is in my group", s), "one answer at a time")
+	Ok(not sound:IsEnabled(), "no sound without the warning")
+	Has(ScreenText(s.pages[2].example), "No warning.", "the example says what happens instead")
+	Press("Next", s)
+
+	-- 3. Who RepKeeper adds by itself.
+	Has(ScreenText(s), "Who should RepKeeper add to your list?")
+	Ok(Picked("My dungeon groups", s), "the dungeon groups, as before")
+	local example = s.pages[3].example
+	HasNot(ScreenText(example), "Elwynn Forest")
+	Press("Nobody", s)
+	Has(ScreenText(example), "Nobody else is added.")
+	local prune = FindButton("Remove them again when I haven't seen them for 30 days", s)
+	Ok(not prune:IsEnabled(), "nothing to remove when nobody is added")
+	Press("Everyone I group with", s)
+	Has(ScreenText(example), "Grouped with in Elwynn Forest", "the example has a group outside dungeons too")
+	Ok(prune:IsEnabled())
+	Click(prune)
+	Press("Next", s)
+
+	-- 4. Tooltips: this player had them off.
+	Ok(Picked("No, leave tooltips as they are", s))
+	example = s.pages[4].example
+	HasNot(ScreenText(example), "BLACKLISTED", "the example tooltip without RepKeeper's lines")
+	Press("Yes, add it to their tooltip", s)
+	Has(ScreenText(example), "BLACKLISTED")
+	Has(ScreenText(example), "Rolled need on everything.")
+	Press("No, leave tooltips as they are", s)
+	Press("Next", s)
+
+	-- 5. The minimap button.
+	Ok(Picked("Yes, show it on the minimap", s))
+	Press("No, I'll type /rk", s)
+	Has(ScreenText(s.pages[5].example), "No button. Type /rk to open RepKeeper.")
+	Press("Back", s)
+	Eq(Text(s.step), "Step 4 of 6", "Back goes back a page")
+	Ok(Picked("No, leave tooltips as they are", s), "with the answers kept")
+	Press("Next", s)
+	Press("Next", s)
+
+	-- 6. What you picked.
+	Eq(Text(s.step), "Step 6 of 6")
+	Eq(Text(s.next), "Finish")
+	local text = ScreenText(s)
+	Has(text, "You're all set!")
+	Has(text, "Look: Horde, 120% size")
+	Has(text, "Warnings: off")
+	Has(text, "Added by itself: Everyone I group with, removed after 30 days unseen")
+	Has(text, "Tooltips: No")
+	Has(text, "Minimap button: No")
+	Has(text, "Turning the warnings on or off takes effect after a reload.")
+	Has(text, "Open RepKeeper: type /rk.", "the tips follow your answers")
+	Eq(ns.S.groupWarningEnabled, true, "nothing is saved before Finish")
+	Eq(ns.S.autoTrackAllGroups, false)
+	Press("Finish", s)
+	Ok(not s:IsShown())
+	Has(Chat(), "You're all set. Type /rk to open RepKeeper")
+	Eq(MOCK.reloads, 0, "Finish doesn't reload")
+	local S = ns.S
+	Eq(S.ui.theme, "horde")
+	Eq(ns.W.themeId, "horde")
+	Near(S.ui.scale, 1.2, 0.001)
+	Eq(S.groupWarningEnabled, false)
+	Eq(S.autoTrackAllGroups, true)
+	Eq(S.autoTrackDungeonGroups, true)
+	Eq(S.autoPruneEnabled, true)
+	Eq(S.tooltipEnabled, false)
+	Eq(S.minimapButton.hide, true)
+	Ok(not MOCK.minimapButtons.RepKeeper.shown, "the minimap button goes")
+	Eq(S.setupVersion, 1)
+	local o = Open(ns, "options")
+	Ok(o.reload:IsShown(), "the Options tab offers the reload too")
+	Eq(Logout().global.settings.setupVersion, 1, "saved: it doesn't open at the next login")
+end)
+
+T("setup: Finish and reload, when the warnings changed", function()
+	local ns = Start(BeforeSetup())
+	local s = SetupWindow(ns)
+	Press("Next", s)
+	Press("No, don't warn me", s)
+	for _ = 1, 4 do
+		Press("Next", s)
+	end
+	Press("Finish and reload", s)
+	Eq(ns.S.groupWarningEnabled, false)
+	Eq(MOCK.reloads, 1)
+end)
+
+T("setup: closed before Finish, nothing changes and the look you tried goes back", function()
+	local ns = Start()
+	Ok(SetupClosed(ns), "this player went through it before")
+	Slash("/rk setup")
+	local s = SetupWindow(ns)
+	Eq(Text(s.subtitle), "Setup")
+	Ok(not FindButton("Skip setup", s), "Cancel instead of Skip setup when you open it yourself")
+	Press("Steel", s)
+	MOCK.DragSlider(FindText("UI size", s):GetParent(), 80)
+	Near(s:GetScale(), 0.8, 0.001)
+	Chat()
+	UIParent:Hide()
+	UIParent:Show()
+	Ok(s:IsShown(), "hiding the interface (Alt+Z) leaves it open")
+	Eq(ns.W.themeId, "steel", "with the look you're trying")
+	Near(s:GetScale(), 0.8, 0.001, "and the size")
+	HasNot(Chat(), "Setup closed", "and nothing is said")
+	Press("Next", s)
+	Press("No, don't warn me", s)
+	Press("Cancel", s)
+	Ok(not s:IsShown())
+	Has(Chat(), "Setup closed, nothing was changed.")
+	Eq(ns.W.themeId, "classic", "the look goes back")
+	Near(s:GetScale(), 1, 0.001, "and the size")
+	Eq(ns.S.groupWarningEnabled, true)
+	Slash("/rk setup")
+	Eq(Text(s.step), "Step 1 of 6", "it starts at the beginning again")
+	Press("Next", s)
+	Ok(Picked("Yes, warn me when one is in my group", s), "from your settings, not the answers you left")
+	Click(s.close)
+	Ok(not s:IsShown(), "the X closes it")
+	Has(Chat(), "Setup closed, nothing was changed.")
+	local o = Open(ns, "options")
+	Press("Run setup again", o.box)
+	SetupWindow(ns)
+	MOCK.PressEscape()
+	Ok(not s:IsShown(), "Esc closes it")
+	Slash("/rk help")
+	Has(Chat(), "/rk setup - run the setup again")
+end)
+
+T("setup: never opens in a fight; it waits until the fight is over", function()
+	local ns = Boot({ db = BeforeSetup(), beforeLoad = function() MOCK.combat = true end })
+	Ok(SetupClosed(ns), "not during the fight")
+	MOCK.Advance(30, 0.5)
+	Ok(SetupClosed(ns))
+	MOCK.combat = false
+	MOCK.Fire("PLAYER_REGEN_ENABLED")
+	MOCK.Advance(2, 0.5)
+	SetupWindow(ns)
+end)
+
+-- Who RepKeeper adds by itself ------------------------------------------------------------------------------------------------
+local function Key(first, realm, surname)
+	return first:lower() .. "-" .. (FOREVER and surname or realm):lower()
+end
+local function Lines(rec)
+	local out = {}
+	for _, e in ipairs(rec and rec.timeline or {}) do
+		out[#out + 1] = e.text
+	end
+	return table.concat(out, "; ")
+end
+local DUNGEON = FOREVER and "The Deadmines" or "The Stonevault"
+
+T("Everyone I group with: the players you group with go on your list as Neutral, with where you grouped", function()
+	local ns = Start()
+	local kael = MOCK.Person("Kael", FOREVER and "Sunstrider" or "Draenor", "PALADIN")
+	local kaelKey = Key("Kael", "Draenor", "Sunstrider")
+	MOCK.SetGroup({ kael })
+	Eq(Players(ns)[kaelKey], nil, "My dungeon groups (the default) adds nobody outside dungeons")
+
+	-- Turned on in a group: that group goes on the list right away.
+	local o = Open(ns, "options")
+	Press("Tracking", o.nav)
+	local dd = FindText("My dungeon groups", o.box):GetParent()
+	Click(dd.button)
+	Eq(table.concat(MenuTexts(), ","), "Nobody,My dungeon groups,Everyone I group with")
+	MenuClick("Everyone I group with")
+	Ok(ns.S.autoTrackAllGroups and ns.S.autoTrackDungeonGroups, "everyone takes in the dungeon groups")
+	local rec = Players(ns)[kaelKey]
+	Ok(rec, "someone new goes on the list")
+	Eq(rec.reputation, 0, "as Neutral")
+	Eq(rec.source, "auto_group")
+	Eq(rec.class, "PALADIN")
+	Eq(Lines(rec), "Grouped with in Elwynn Forest")
+	ns.UI.Hide()
+
+	-- Someone you rated: their rating stays.
+	local grim = MOCK.Person("Grimtusk", FOREVER and "Ironhand" or "Ragnaros", "WARRIOR")
+	MOCK.SetGroup({ kael, grim })
+	local g = Players(ns)[P.grim.key]
+	Eq(g.reputation, -1, "someone you rated keeps their rating")
+	Eq(g.timeline[#g.timeline].text, "Grouped with in Elwynn Forest", "and gets the line too")
+
+	-- Travelling together adds nothing; a dungeon together adds one line (not two: Everyone takes in My dungeon groups).
+	MOCK.zone = "Westfall"
+	MOCK.Fire("ZONE_CHANGED_NEW_AREA")
+	MOCK.SetGroup({ kael, grim })
+	Eq(#rec.timeline, 1, "travelling together adds nothing")
+	MOCK.instance = { name = DUNGEON, type = "party" }
+	MOCK.Fire("PLAYER_ENTERING_WORLD", false, false)
+	MOCK.Advance(5, 0.5)
+	Eq(Lines(rec), "Grouped with in Elwynn Forest; Grouped with in " .. DUNGEON, "one line for the dungeon")
+	if not FOREVER then
+		MOCK.keystone = { mapID = 501, level = 10, name = DUNGEON }
+		MOCK.Fire("CHALLENGE_MODE_START", 501)
+		Eq(rec.timeline[2].text, "Grouped with in " .. DUNGEON .. " +10", "a Mythic+ key's level, as My dungeon groups writes it")
+		-- Another group with them in the same dungeon soon after: one line for both, and the first key stays on it.
+		MOCK.SetGroup(nil)
+		MOCK.SetGroup({ kael, grim })
+		MOCK.keystone.level = 12
+		MOCK.Fire("CHALLENGE_MODE_START", 501)
+		Eq(Lines(rec), "Grouped with in Elwynn Forest; Grouped with in " .. DUNGEON .. " +10", "the first run's line keeps its key")
+		MOCK.keystone = nil
+	end
+	MOCK.instance = nil
+	MOCK.Fire("PLAYER_ENTERING_WORLD", false, false)
+	MOCK.Advance(5, 0.5)
+	Eq(#rec.timeline, 2, "back outside: nothing new")
+
+	-- Leaving and joining again soon after starts from nothing noted, like a /reload: still the same group, nothing new
+	-- (outside, in another zone than where it started).
+	MOCK.SetGroup(nil)
+	MOCK.SetGroup({ kael })
+	Eq(#rec.timeline, 2, "the same group again soon after adds nothing")
+
+	-- Another group, hours later: a new line.
+	MOCK.SetGroup(nil)
+	MOCK.Advance(3 * 3600, 600)
+	MOCK.SetGroup({ kael })
+	Eq(#rec.timeline, 3)
+	Eq(rec.timeline[3].text, "Grouped with in Westfall")
+
+	-- Nobody: nobody is added.
+	MOCK.SetGroup(nil)
+	ns.GroupTracker:SetMode("nobody")
+	Ok(not ns.S.autoTrackAllGroups and not ns.S.autoTrackDungeonGroups)
+	MOCK.SetGroup({ MOCK.Person("Bob", FOREVER and "Stoutbeard" or "Draenor", "ROGUE") })
+	Eq(Players(ns)[Key("Bob", "Draenor", "Stoutbeard")], nil, "Nobody adds nobody")
+end)
+
+T("Everyone I group with: dungeon finder groups, battlegrounds, fights, and names the game hasn't sent yet", function()
+	local ns = Start()
+	ns.GroupTracker:SetMode("everyone")
+	local kael = MOCK.Person("Kael", FOREVER and "Sunstrider" or "Draenor", "PALADIN")
+	local kaelKey = Key("Kael", "Draenor", "Sunstrider")
+	MOCK.SetGroup({ kael }, false, "instance")
+	Eq(Players(ns)[kaelKey], nil, "a dungeon finder group gets no line where you queued")
+	MOCK.instance = { name = DUNGEON, type = "party" }
+	MOCK.Fire("PLAYER_ENTERING_WORLD", false, false)
+	Eq(Lines(Players(ns)[kaelKey]), "Grouped with in " .. DUNGEON, "but one in the dungeon")
+	MOCK.SetGroup(nil)
+
+	local bob = MOCK.Person("Bob", FOREVER and "Stoutbeard" or "Draenor", "ROGUE")
+	local bobKey = Key("Bob", "Draenor", "Stoutbeard")
+	MOCK.instance = { name = "Warsong Gulch", type = "pvp" }
+	MOCK.Fire("PLAYER_ENTERING_WORLD", false, false)
+	MOCK.SetGroup({ bob }, true, "instance")
+	Eq(Players(ns)[bobKey], nil, "battlegrounds are left out")
+	MOCK.SetGroup(nil)
+	MOCK.instance = nil
+	MOCK.Fire("PLAYER_ENTERING_WORLD", false, false)
+
+	MOCK.combat = true
+	MOCK.SetGroup({ bob })
+	Eq(Players(ns)[bobKey], nil, "nobody is looked at during a fight")
+	MOCK.combat = false
+	MOCK.Fire("PLAYER_REGEN_ENABLED")
+	Eq(Lines(Players(ns)[bobKey]), "Grouped with in Elwynn Forest", "only after it")
+
+	local nyx = MOCK.Person("Unknown", nil, "MAGE")
+	MOCK.SetGroup({ bob, nyx })
+	nyx.name, nyx.realm = "Nyx", FOREVER and "Shadowveil" or "Draenor"
+	MOCK.Advance(3, 0.5)
+	Ok(Players(ns)[Key("Nyx", "Draenor", "Shadowveil")], "someone who shows as Unknown is looked at again a moment later")
+	for _, rec in pairs(Players(ns)) do
+		Ok(rec.name ~= "Unknown", "nobody called Unknown")
+	end
+
+	MOCK.secrets = { Shade = true }
+	MOCK.SetGroup({ bob, nyx, MOCK.Person("Shade", FOREVER and "Veil" or "Draenor", "PRIEST") })
+	MOCK.secrets = nil
+	Eq(Players(ns)[Key("Shade", "Draenor", "Veil")], nil, "names the game keeps from addons are skipped")
+end)
+
+-- Every setup page in every look: nothing outside its page, nothing running into the example at the bottom.
+local function IntoExample(page)
+	local out = {}
+	local box = page.example
+	if not box then
+		return out
+	end
+	local r = Rect(box)
+	local top = r.b + r.h
+	local t = Rect(box.title)
+	if t and Text(box.title) ~= "" then
+		top = math.max(top, t.b + t.h)
+	end
+	local inBox = { [box] = true }
+	for _, obj in ipairs(Descendants(box)) do
+		inBox[obj] = true
+	end
+	for _, obj in ipairs(Descendants(page)) do
+		local o = Rect(obj)
+		if not inBox[obj] and o and o.w > 0 and o.h > 0 and o.b < top - 0.5 then
+			out[#out + 1] = (obj._kind == "FontString" and ("text '" .. Text(obj) .. "'") or obj._kind) .. " runs into the example"
+		end
+	end
+	return out
+end
+
+T("setup: every page fits, and nothing runs into its example, in every look", function()
+	local ns = Start()
+	for _, theme in ipairs(ns.W.THEME_ORDER) do
+		ns.W.SetTheme(theme)
+		Slash("/rk setup")
+		local s = SetupWindow(ns)
+		for i, page in ipairs(s.pages) do
+			-- The answers that show the most: the summary then has the reload note too.
+			if i == 2 then
+				Press("No, don't warn me", s)
+			elseif i == 3 then
+				Press("Everyone I group with", s)
+			end
+			MOCK.Advance(0.1)
+			local where = theme .. " setup page " .. i
+			NoProblems(Outside(s, s, s.header), where .. ": outside the window")
+			NoProblems(Outside(page, s.body), where .. ": outside its page")
+			NoProblems(IntoExample(page), where)
+			NoProblems(CutLabels(s), where .. ": labels cut off")
+			if i < #s.pages then
+				Press("Next", s)
+			end
+		end
+		Press("Cancel", s)
+	end
+end)
+
 -- Looks ---------------------------------------------------------------------------------------------------------------------
 T("every page fits its window, every label fits its button, in every look", function()
 	local ns = Start()

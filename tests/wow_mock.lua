@@ -271,6 +271,9 @@ MOCK.loggedIn = false
 api.IsLoggedIn = function() return MOCK.loggedIn end
 MOCK.reloads = 0
 api.ReloadUI = function() MOCK.reloads = MOCK.reloads + 1 end
+MOCK.combat = false
+api.InCombatLockdown = function() return MOCK.combat end
+api.UNKNOWNOBJECT = "Unknown"
 MOCK.shift = false
 api.IsShiftKeyDown = function() return MOCK.shift end
 MOCK.cursor = { 600, 400 }
@@ -352,19 +355,28 @@ api.C_ChallengeMode = {
 	GetCompletionInfo = function() return MOCK.keystone and MOCK.keystone.mapID, MOCK.keystone and MOCK.keystone.level, 1800000, true end,
 }
 
--- The group: party1..party4 (or raid1..raidN) besides the player.
+-- The group: party1..party4 (or raid1..raidN) besides the player. A group you made yourself is a "home" group; one the
+-- dungeon finder made is an "instance" group.
 MOCK.group = nil
-api.IsInGroup = function() return MOCK.group ~= nil end
+api.LE_PARTY_CATEGORY_HOME = 1
+api.LE_PARTY_CATEGORY_INSTANCE = 2
+api.IsInGroup = function(category)
+	local g = MOCK.group
+	if not g then return false end
+	if category == api.LE_PARTY_CATEGORY_HOME then return g.category ~= "instance" end
+	if category == api.LE_PARTY_CATEGORY_INSTANCE then return g.category == "instance" end
+	return true
+end
 api.IsInRaid = function() return MOCK.group ~= nil and MOCK.group.raid == true end
 api.GetNumGroupMembers = function() return MOCK.group and (#MOCK.group.members + 1) or 0 end
-function MOCK.SetGroup(members, raid)
+function MOCK.SetGroup(members, raid, category)
 	for u in pairs(MOCK.units) do
 		if u:find("^party") or u:find("^raid") then MOCK.units[u] = nil end
 	end
 	if not members then
 		MOCK.group = nil
 	else
-		MOCK.group = { members = members, raid = raid }
+		MOCK.group = { members = members, raid = raid, category = category }
 		for i, p in ipairs(members) do
 			MOCK.units[(raid and "raid" or "party") .. i] = p
 		end

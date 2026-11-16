@@ -574,6 +574,60 @@ function W.Check(parent, label, tip, get, set)
 end
 
 ---------------------------------------------------------------------------
+-- Radio buttons: one choice of a few (the classic round button), with an optional grey line that explains it.
+---------------------------------------------------------------------------
+local RADIO = "Interface\\Buttons\\UI-RadioButton"
+
+local function paintRadio(rb, th)
+    W.Tint(rb:GetNormalTexture(), th.metal)
+    W.Tint(rb:GetHighlightTexture(), th.metal)
+    W.Tint(rb:GetCheckedTexture(), th.check)
+end
+
+-- width: room for the button and its text. onClick(radio) picks it; the caller ticks the radios (SetChecked).
+function W.Radio(parent, label, desc, width, onClick)
+    width = width or 300
+    local rb = CreateFrame("CheckButton", nil, parent)
+    rb:SetSize(16, 16)
+    rb:SetNormalTexture(RADIO)
+    rb:GetNormalTexture():SetTexCoord(0, 0.25, 0, 1)
+    rb:SetHighlightTexture(RADIO, "ADD")
+    rb:GetHighlightTexture():SetTexCoord(0.5, 0.75, 0, 1)
+    rb:SetCheckedTexture(RADIO)
+    rb:GetCheckedTexture():SetTexCoord(0.25, 0.5, 0, 1)
+    rb:SetMotionScriptsWhileDisabled(true)
+    rb.label = W.OneLine(W.Label(rb, label, "GameFontHighlight"))
+    rb.label:SetPoint("LEFT", rb, "RIGHT", 6, 0)
+    rb.label:SetWidth(width - 22)
+    if desc and desc ~= "" then
+        rb.desc = W.Text(rb, desc, width - 22, "GameFontDisableSmall")
+        rb.desc:SetPoint("TOPLEFT", rb.label, "BOTTOMLEFT", 0, -3)
+    end
+
+    -- How tall the button and its text are, for whatever comes under it.
+    function rb:Height()
+        if self.desc then
+            return 17 + math.ceil(self.desc:GetStringHeight())
+        end
+        return 16
+    end
+
+    function rb:SetActive(on)
+        self:SetEnabled(on)
+        self.label:SetFontObject(on and "GameFontHighlight" or "GameFontDisable")
+    end
+
+    rb:SetHitRectInsets(0, -(width - 16), -4, rb.desc and -(rb:Height() - 12) or -4)
+    rb:SetScript("OnClick", function(self)
+        W.Sound("click")
+        if onClick then
+            onClick(self)
+        end
+    end)
+    return W.Themed(rb, paintRadio)
+end
+
+---------------------------------------------------------------------------
 -- Edit boxes (the classic input border)
 ---------------------------------------------------------------------------
 local INPUT = "Interface\\Common\\Common-Input-Border"
@@ -1926,10 +1980,11 @@ end
 -- The biggest window there is (the main window), for the UI size limit.
 W.MAX_WIDTH, W.MAX_HEIGHT = 860, 520
 
--- The UI size: the saved setting, but never bigger than the screen can hold (the window with its header and tabs).
+-- The UI size: the saved setting (or the one the setup shows while you pick, W.previewScale), but never bigger than
+-- the screen can hold (the window with its header and tabs).
 function W.Scale()
     local ui = UIS()
-    local s = U.Clamp(tonumber(ui and ui.scale) or 1, 0.7, 1.5)
+    local s = U.Clamp(tonumber(W.previewScale or (ui and ui.scale)) or 1, 0.7, 1.5)
     local w, h = UIParent:GetWidth(), UIParent:GetHeight()
     if w and h and w > 0 and h > 0 then
         s = min(s, w / (W.MAX_WIDTH + 40), h / (W.MAX_HEIGHT + 60))

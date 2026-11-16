@@ -129,6 +129,8 @@ function EncounterHistory:ShouldAutoTrack()
     -- (20+ players would clutter the list quickly). Arenas/BGs also out
     -- since they're transient and the matchmaking rarely repeats people.
     if not session then return false end
+    -- "Everyone I group with" (GroupTracker) adds them, with a line for the dungeon too.
+    if ns.db.global.settings.autoTrackAllGroups then return false end
     if not ns.db.global.settings.autoTrackDungeonGroups then return false end
     return session.type == C.ENCOUNTER_TYPE.DUNGEON
         or session.type == C.ENCOUNTER_TYPE.MYTHIC_PLUS

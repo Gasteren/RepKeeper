@@ -66,6 +66,7 @@ function RepKeeper:OnEnable()
         "Reputation",
         "Timeline",
         "EncounterHistory",
+        "GroupTracker",
         "Detection",
         "GroupWarning",
         "AutoIgnore",
@@ -79,6 +80,7 @@ function RepKeeper:OnEnable()
         "MainFrame",
         "PlayerEditor",
         "QuickAdd",
+        "Setup",
     }
 
     for _, modName in ipairs(initOrder) do
@@ -162,6 +164,7 @@ function RepKeeper:PrintHelp()
     self:Print(L["/rk import - open import dialog"])
     self:Print(L["/rk backup - create manual backup"])
     self:Print(L["/rk config - open settings"])
+    self:Print(L["/rk setup - run the setup again"])
     self:Print(L["/rk help - this help"])
 end
 
@@ -274,5 +277,11 @@ end
 SlashHandlers.players = function(self)
     if ns.UI and ns.UI.Show then
         ns.UI.Show("players")
+    end
+end
+
+SlashHandlers.setup = function(self)
+    if ns.Setup and ns.Setup.Open then
+        ns.Setup.Open(false)
     end
 end

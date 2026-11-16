@@ -30,6 +30,7 @@ VERIFIED_FILES = {
     "interface\\buttons\\ui-panel-minimizebutton-up",
     "interface\\buttons\\ui-panel-minimizebutton-down",
     "interface\\buttons\\ui-panel-minimizebutton-highlight",
+    "interface\\icons\\inv_misc_note_01",
 }
 
 

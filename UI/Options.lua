@@ -59,6 +59,11 @@ function Options.NeedsReload()
     return false
 end
 
+-- How a setting that is read at login was when you logged in (true/false; nil before that).
+function Options.LoginValue(key)
+    return loginValues[key]
+end
+
 local function reloadTip(text)
     return text .. "\n\n" .. U.Color(ns.COLOR.orange, RELOAD_NOTE)
 end
@@ -118,6 +123,13 @@ addPage({
     desc = L["How RepKeeper looks, its minimap button, and how names and dates show."],
     build = function(page)
         local stack, content = scrollStack(page)
+
+        stack:Header(L["Setup"])
+        stack:Button(L["Run setup again"], function()
+            ns.Setup.Open(false)
+        end, L["Walks you through the main settings again, with an example of each. Nothing changes until you press Finish."], {
+            keywords = L["wizard first time start"],
+        })
 
         stack:Header(L["Window"])
         stack:Dropdown(L["Look"], 170, function()
@@ -243,8 +255,21 @@ addPage({
         stack:Header(L["Groups"])
         local get, set = setting("encounterHistoryEnabled")
         stack:Check(L["Remember my groups"], reloadTip(L["Keeps the dungeons, raids and battlegrounds you run and who was in them (the Groups tab)."]), get, set, { keywords = L["encounters history runs"] })
-        get, set = setting("autoTrackDungeonGroups")
-        stack:Check(L["Add my dungeon groupmates to the list"], L["Everyone in your dungeon and Mythic+ groups is added as Neutral, with a line in their history. Raids are left out: too many people."], get, set, { indent = 18 })
+
+        stack:Header(L["Adding players"])
+        local choices = {}
+        for i, c in ipairs(UI.TrackingChoices()) do
+            choices[i] = { text = c.text, value = c.value, tooltip = c.desc }
+        end
+        stack:Dropdown(L["Add to my list by themselves"], 170, choices, function()
+            return ns.GroupTracker:GetMode()
+        end, function(mode)
+            ns.GroupTracker:SetMode(mode)
+            changed("autoTrackAllGroups")
+        end, {
+            tip = L["The players RepKeeper adds start as Neutral, with a line in their history saying where you grouped. My dungeon groups needs Remember my groups."],
+            keywords = L["auto add track groupmates dungeon everyone group neutral"],
+        })
 
         stack:Header(L["Clean-up"])
         get, set = setting("autoPruneEnabled")
@@ -591,6 +616,7 @@ local COMMANDS = {
     { "/rk tag Name tag", L["add or remove a tag (its id, like toxic)"] },
     { "/rk groups", L["open the Groups tab"] },
     { "/rk options", L["open these options"] },
+    { "/rk setup", L["run the setup again"] },
     { "/rk export, /rk import", L["share your list"] },
     { "/rk backup", L["back up your list now"] },
 }
