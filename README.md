@@ -4,6 +4,10 @@ A World of Warcraft addon for tracking player reputation, blacklists, and encoun
 
 Stop forgetting which random pug ninja-looted, which key-leaver wrecked your Tuesday, or which DPS you'd actually want to run with again. RepKeeper remembers - across all your characters on the same Battle.net account.
 
+## The setup
+
+The first time you log in with RepKeeper, a short setup walks you through the main settings, one question a page, each with a small example of what it changes: the look and size of the windows, the warning about blacklisted players, who RepKeeper adds to your list by itself, what player tooltips show, and the minimap button. Nothing changes until you press **Finish**, and **Skip setup** keeps everything as it is. If you're updating from an earlier version, you'll see it once too, with your own settings already picked. Run it again any time with <code>/rk setup</code> or **Run setup again** under Options > General.
+
 ## The window
 
 Type <code>/rk</code> or click the minimap button. One window in the game's own style, with three tabs:
@@ -26,6 +30,7 @@ Pick a look under Options > General: **Classic** (the game's own frames), **Stee
 *   **Auto-ignore / auto-decline** - optional automation for blacklisted players (group invites, guild invites, duels)
 *   **LFG list filtering** - highlight or hide premade groups based on the leader's reputation
 *   **Encounter history** - who you ran what content with and how it ended (timed/depleted/abandoned/left-early), on the Groups tab
+*   **Who goes on your list by itself** - **Nobody**, **My dungeon groups** (the players of your dungeon runs), or **Everyone I group with** (every party and raid you join, anywhere; battlegrounds are left out). They start as Neutral with a line in their history saying where you grouped, and can be removed again when you haven't seen them for a while.
 *   **Battle.net alt detection** - characters that share a BNet account get linked automatically
 *   **Guild sync** - share blacklists with trusted guildmates (opt-in, trust-tiered)
 *   **Import/export** - compact shareable strings
@@ -46,6 +51,7 @@ Pick a look under Options > General: **Classic** (the game's own frames), **Stee
 | <code>/rk tag Name-Realm &lt;tagID&gt;</code> |Toggle a tag               |
 | <code>/rk export</code> / <code>/rk import</code> |Open import/export dialogs |
 | <code>/rk backup</code>         |Create a manual backup     |
+| <code>/rk setup</code>          |Run the setup again        |
 | <code>/rk help</code>           |List the commands          |
 
 ## Storage

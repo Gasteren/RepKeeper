@@ -188,6 +188,9 @@ C.DEFAULTS = {
             -- Auto-add dungeon/M+ groupmates as neutral records (raids excluded
             -- to avoid clutter — 20+ pug raids would flood the list)
             autoTrackDungeonGroups  = true,
+            -- Auto-add everyone you group with (any party or raid, anywhere;
+            -- battlegrounds excluded) as neutral records. See GroupTracker.
+            autoTrackAllGroups      = false,
 
             -- Guild sync
             guildSyncEnabled         = false,
@@ -228,6 +231,8 @@ C.DEFAULTS = {
                 pos   = {},
                 tab   = "players",
             },
+            -- The setup version this account went through (or skipped); lower than UI\Setup.lua's opens it once.
+            setupVersion            = 0,
         },
         backups = {},  -- [timestamp] = serialized snapshot
         lastBackupTime = 0,

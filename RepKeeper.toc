@@ -3,7 +3,7 @@
 ## Title: RepKeeper
 ## Notes: Player reputation, blacklist, and encounter history tracker
 ## Author: Frost Forever | EU Normal Ruleset
-## Version: 2.0.0
+## Version: 2.1.0
 ## IconTexture: Interface\Icons\achievement_reputation_08
 ## SavedVariables: RepKeeperDB
 ## X-Curse-Project-ID: 1544433
@@ -39,6 +39,7 @@ Modules\AltTracking.lua
 Modules\Reputation.lua
 Modules\Timeline.lua
 Modules\EncounterHistory.lua
+Modules\GroupTracker.lua
 Modules\Detection.lua
 Modules\GroupWarning.lua
 Modules\AutoIgnore.lua
@@ -57,6 +58,7 @@ UI\Dialogs.lua
 UI\Players.lua
 UI\Groups.lua
 UI\Options.lua
+UI\Setup.lua
 UI\QuickAdd.lua
 UI\Warnings.lua
 UI\Minimap.lua

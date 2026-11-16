@@ -82,6 +82,27 @@ function UI.RatingChoices()
     return items
 end
 
+-- Who RepKeeper adds to the list by itself (Modules\GroupTracker.lua): { value, text, desc }.
+function UI.TrackingChoices()
+    return {
+        {
+            value = "nobody",
+            text = L["Nobody"],
+            desc = L["Only the players you rate or add yourself are on your list."],
+        },
+        {
+            value = "dungeons",
+            text = L["My dungeon groups"],
+            desc = L["Everyone in your dungeon groups, when you go in. Raids are left out."],
+        },
+        {
+            value = "everyone",
+            text = L["Everyone I group with"],
+            desc = L["Every party and raid you join, anywhere. Battlegrounds are left out."],
+        },
+    }
+end
+
 UI.TIER_ORDER = { "negative", "neutral", "positive" }
 UI.TIER_COLOR = {
     negative = { 1, 0.38, 0.38 },
